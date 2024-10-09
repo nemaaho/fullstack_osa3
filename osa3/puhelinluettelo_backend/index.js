@@ -1,5 +1,3 @@
-//const http = require("http");
-
 const express = require("express");
 const app = express();
 
@@ -32,6 +30,15 @@ app.get("/", (request, response) => {
 
 app.get("/api/persons", (request, response) => {
   response.json(persons);
+});
+
+app.get("/info", (request, response) => {
+  const numberOfPersons = persons.length;
+  const date = new Date();
+  response.send(`
+    <p>Phonebook has info for ${numberOfPersons} people</p>
+    <p>${date}</p>
+  `);
 });
 
 const PORT = 3001;
