@@ -1,36 +1,39 @@
 const express = require("express");
+const app = express();
+require("dotenv").config();
+
 const morgan = require("morgan");
 const cors = require("cors");
+const Person = require("./models/person.js");
 
-const app = express();
+/*const mongoose = require("mongoose");
+
+const url = process.env.MONGODB_URI;
+
+mongoose.set("strictQuery", false);
+mongoose.connect(url);
+
+const personSchema = new mongoose.Schema({
+  name: String,
+  number: String,
+});
+
+//const Person = mongoose.model("Person", personSchema);
+
+personSchema.set("toJSON", {
+  transform: (_person, returnedObject) => {
+    returnedObject.id = returnedObject._id.toString();
+    delete returnedObject._id;
+    delete returnedObject.__v;
+  },
+});*/
 
 app.use(express.json());
 app.use(morgan("tiny"));
 app.use(cors());
 app.use(express.static("dist"));
 
-let persons = [
-  {
-    name: "Arto Hellas",
-    number: "040-123456",
-    id: "1",
-  },
-  {
-    name: "Ada Lovelace",
-    number: "39-44-5323523",
-    id: "2",
-  },
-  {
-    name: "Dan Abramov",
-    number: "12-43-234345",
-    id: "3",
-  },
-  {
-    name: "Mary Poppendieck",
-    number: "39-23-6423122",
-    id: "4",
-  },
-];
+let persons = [];
 
 app.get("/", (request, response) => {
   response.send("<h1>Hello World!</h1>");
@@ -41,13 +44,9 @@ app.get("/api/persons", (request, response) => {
 });
 
 app.get("/api/persons/:id", (request, response) => {
-  const id = request.params.id;
-  const person = persons.find((person) => person.id === id);
-  if (person) {
+  Person.findById(request.params.id).then((person) => {
     response.json(person);
-  } else {
-    response.status(404).end();
-  }
+  });
 });
 
 app.delete("/api/persons/:id", (request, response) => {
@@ -60,19 +59,18 @@ app.delete("/api/persons/:id", (request, response) => {
 app.post("/api/persons", (request, response) => {
   const body = request.body;
 
-  console.log("POST request data:", body);
-
   if (!body.name || !body.number) {
-    return response.status(400).json({ error: "name or number is missing" });
+    return response.status(400).json({ error: "content missing" });
   }
-  const nameExists = persons.some((person) => person.name === body.name);
-  if (nameExists) {
-    return response.status(400).json({ error: "name must be unique" });
-  }
-  body.id = Math.floor(Math.random() * 10000).toString();
-  persons.push(body);
 
-  response.status(201).json(body);
+  const person = new Person({
+    name: body.name,
+    number: body.number,
+  });
+
+  person.save().then((savedPerson) => {
+    response.json(savedPerson);
+  });
 });
 
 app.get("/info", (request, response) => {
@@ -84,7 +82,7 @@ app.get("/info", (request, response) => {
   `);
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
